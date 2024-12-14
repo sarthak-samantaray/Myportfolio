@@ -71,7 +71,8 @@ def contact():
 
 @app.route('/about') 
 def about():
-    return render_template('about.html') 
+    skills = mongo_skills.db.skills_details.find()
+    return render_template('about.html',skills=skills) 
 
 
 ################################## BLOG OPERATIONS ####################################
@@ -125,5 +126,39 @@ def delete_blog(blog_id):
 
 ###################################################################################
 
+################################## Skill OPERATIONS ####################################
+
+@app.route("/add_skills", methods=["GET", "POST"])
+def add_skills():
+    if request.method == "POST":
+        skill_name = request.form.get("skill_name")
+        percentage = request.form.get("percentage")
+        
+        # Handle file upload for the skill icon
+        if 'icon' not in request.files:
+            return "No file part", 400
+        file = request.files['icon']
+        if file.filename == '':
+            return "No selected file", 400
+        
+        # Secure the filename and save the file
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        # Create the URL for the uploaded icon
+        icon_url = url_for('static', filename='images/skill_logos/' + filename)
+
+        # Create a new skill entry
+        new_skill = {
+            "name": skill_name,
+            "icon_url": icon_url,
+            "percentage": percentage
+        }
+        
+        mongo_skills.db.skills_details.insert_one(new_skill)
+        return redirect(url_for("about"))  # Redirect to the about page or wherever you want
+
+    return render_template("add_skills.html")  # Create a template for adding skills
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,0 +1,70 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Lekton', monospace;
+  }
+  
+  body {
+    background-color: #1f1e23;
+    color: white;
+    padding: 2rem;
+    /* max-width: 1200px; */
+    margin: 0 auto;
+    background-image: url('/static/images/backgrounds/O5X8IV0.jpg');
+    background-size: cover;
+    background-position: center;
+  }
+
+/* NAVBAR */
+.navigation {
+    padding: 0px 120px;
+    transition: .3s ease;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    background-color: #111111;
+    height: 150px;
+    border-bottom: 0.5px solid rgba(154, 154, 154, 0.5);
+  }
+  
+  .navigation.nav-bg {
+    background-color: #295f4e;
+    padding: 15px 100px;
+  }
+  
+  @media (max-width: 991px) {
+    .navigation.nav-bg {
+      padding: 15px 20px;
+    }
+  }
+  
+  @media (max-width: 991px) {
+    .navigation {
+      padding: 20px;
+      background: #295f4e;
+    }
+  }
+  
+  .navbar .nav-item .nav-link {
+    font-family: 'Lekton', monospace;
+    text-transform: uppercase;
+    padding: 15px;
+    transition: opacity 0.3s ease;
+    font-size: 1.5rem;
+    margin-top: 30px;
+  }
+  
+  .navbar .nav-item .nav-link:hover {
+    opacity: 0.7;
+  }
+  
+  .navbar .nav-item.active {
+    font-weight: bold;
+  }
+  
+  .navbar-dark .navbar-nav .nav-link {
+    color: #fff;
+  }
+  
+  /* NAVBAR ENDING */
