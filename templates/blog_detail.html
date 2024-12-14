@@ -1,0 +1,22 @@
+<html lang="en"></html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ blog.title }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <a href="/blog" class="btn btn-secondary mb-3">Back to All Blogs</a>
+        <div class="card">
+            <img src="{{ blog.image_url }}" class="card-img-top" alt="{{ blog.title }}">
+            <div class="card-body">
+                <h1 class="card-title">{{ blog.title }}</h1>
+                <p class="card-text">Tags: {{ blog.tags | join(', ') }}</p>
+                <p class="card-text">{{ blog.description }}</p>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

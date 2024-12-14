@@ -1,0 +1,34 @@
+<!-- blog.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">All Blogs</h1>
+        <a href="/add" class="btn btn-primary mb-3">Add New Blog</a>
+        <div class="row">
+            {% for blog in blogs %}
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <img src="{{ blog.image_url }}" class="card-img-top" alt="{{ blog.title }}">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ blog.title }}</h5>
+                        <p class="card-text">Tags: {{ blog.tags | join(', ') }}</p>
+                        <a href="/blog/{{ blog._id }}" class="btn btn-secondary">Read More</a>
+                        <form action="/delete/{{ blog._id }}" method="post" class="mt-2">
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
