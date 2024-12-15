@@ -149,6 +149,7 @@
 .blog-container{
   padding-left: 300px;
   max-width: 1000px;
+  margin-top: -200px;
 }
 .blog-card {
   background-color: #1e1e21;

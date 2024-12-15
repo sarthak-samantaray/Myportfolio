@@ -65,8 +65,7 @@
     <a href="https://www.linkedin.com/in/sarthaksamantaray/">Linkedin</a>
 
 </div>
-
-<div class = "filter-container">
+<div class="filter-container">
     <div class="filter-box">
         <h3>Filter Blogs</h3>
         <form id="filter-form" method="GET" action="/filter">
@@ -86,7 +85,7 @@
                 <option value="11">November</option>
                 <option value="12">December</option>
             </select>
-    
+
             <label for="year">Year:</label>
             <select name="year" id="year">
                 <option value="">All</option>
@@ -96,11 +95,59 @@
                 <option value="2021">2021</option>
                 <option value="2020">2020</option>
             </select>
-    
-            <button type="submit" class="filter-button">Apply Filter</button>
+
+            <label for="tags">Tags:</label>
+            <select id="tag-dropdown" style="width: 100%; padding: 5px; border-radius: 5px; border: 1px solid #ccc;">
+                <option value="">Select a tag</option>
+                {% for tag in tags %}
+                <option value="{{ tag }}">{{ tag }}</option>
+                {% endfor %}
+            </select>
+            <div id="selected-tags" style="margin-top: 10px; border: 1px solid #ccc; padding: 5px; border-radius: 5px; min-height: 40px; background-color: #f9f9f9;">
+                <span style="color: #666;">Selected tags will appear here</span>
+            </div>
+
+            <input type="hidden" name="tags" id="tags-input" />
+
+            <button type="submit" class="filter-button" style="margin-top: 10px; background-color: #1e1e1e; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Apply Filter</button>
         </form>
     </div>
 </div>
+
+<script>
+    const tagDropdown = document.getElementById('tag-dropdown');
+    const selectedTagsContainer = document.getElementById('selected-tags');
+    const tagsInput = document.getElementById('tags-input');
+
+    let selectedTags = [];
+
+    tagDropdown.addEventListener('change', () => {
+        const selectedTag = tagDropdown.value;
+        if (selectedTag && !selectedTags.includes(selectedTag)) {
+            selectedTags.push(selectedTag);
+            updateSelectedTags();
+        }
+        tagDropdown.value = ""; // Reset dropdown
+    });
+
+    function updateSelectedTags() {
+        selectedTagsContainer.innerHTML = '';
+        selectedTags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.textContent = tag;
+            tagElement.style.cssText = 'display: inline-block; margin: 5px; padding: 5px 10px; background-color: #9a9a9a; color: white; border-radius: 3px; cursor: pointer;';
+            tagElement.addEventListener('click', () => {
+                selectedTags = selectedTags.filter(t => t !== tag);
+                updateSelectedTags();
+            });
+            selectedTagsContainer.appendChild(tagElement);
+        });
+        if (selectedTags.length === 0) {
+            selectedTagsContainer.innerHTML = '<span style="color: #666;">Selected tags will appear here</span>';
+        }
+        tagsInput.value = selectedTags.join(','); // Update hidden input field
+    }
+</script>
 
 
 <!-- blog-list.html -->
@@ -121,9 +168,6 @@
                         </div>
                         <div class="action-buttons">
                             <a href="/blog/{{ blog._id }}" class="btn btn-secondary">Read More</a>
-                            <form action="/delete/{{ blog._id }}" method="post" style="display: inline;">
-                                <button type="submit" class="btn btn-danger">Delete</button>
-                            </form>
                         </div>
                     </div>
                 </div>

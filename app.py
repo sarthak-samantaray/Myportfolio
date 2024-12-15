@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 from bson import json_util
 from flask import request
 import json
+from datetime import datetime
 
 
 app = Flask(__name__)
@@ -34,7 +35,7 @@ except Exception as e:
 def home():
     try:
         blogs = mongo_blogs.db.blogs_lists.find()
-        projects = mongo_projects.db.projects_lists.find()  # Fetch projects from the projects collection
+        projects = mongo_projects.db.projects_lists.find({'show_on_main': True})  # Filter projects
         skills = mongo_skills.db.skills_details.find()
         print(skills)  # Fetch skills from the skills_details collection
 
@@ -51,21 +52,81 @@ def blog():
         return "Database connection error", 500  # Handle connection error
     blogs = mongo_blogs.db.blogs_lists.find()
     blogs_list = list(blogs)
-    return render_template("blog.html", blogs=blogs_list)
+
+    # Get all unique tags for the filter dropdown
+    tags = mongo_blogs.db.blogs_lists.distinct('tags')
+    return render_template("blog.html", blogs=blogs_list , tags = tags)
 
 # Blog Detail Page
+import markdown
+from markupsafe import Markup
 @app.route("/blog/<blog_id>")
 def blog_detail(blog_id):
-    if mongo is None:
-        return "Database connection error", 500  # Handle connection error
-    blog = mongo.db.blogs_lists.find_one({"_id": ObjectId(blog_id)})
-    return render_template("blog_detail.html", blog=blog)
+        # Ensure MongoDB is connected
+        if mongo is None:
+            return "Database connection error", 500
+
+        # Fetch a single blog by ID
+        blog_post = mongo_blogs.db.blogs_lists.find_one({"_id": ObjectId(blog_id)})
+        print(blog_post)
+        # Check if the blog exists
+        if not blog_post:
+            return "Blog not found", 404
+
+        # Now try to fetch the specific blog
+        if blog_post:
+            # Parse the markdown content
+            print(blog_post['content'])
+            parsed_content = parse_markdown(blog_post['content'])
+            print("Parsed_Content",parsed_content)
+            # Format the date
+            formatted_date = blog_post['edit_date'].strftime('%B %d, %Y') if isinstance(blog_post['edit_date'], datetime) else blog_post['edit_date']
+
+            return render_template('blog_detail.html', 
+                                post=blog_post,
+                                content=parsed_content,
+                                formatted_date=formatted_date)
+        else:
+            all_ids = [str(post['_id']) for post in mongo_blogs.db.blogs_lists.find({}, {'_id': 1})]
+            return f"Blog post with ID '675e76aa2f1568af4d8a10c2' not found. Available blog IDs: {all_ids}", 404
 
 
+
+@app.route('/filter_projects')
+def fiter_projects():
+    try:
+        # Get filter parameters
+
+        tags = request.args.get('tags')  # Get tags as a comma-separated string
+        tag_list = tags.split(',') if tags else []
+
+        # Create a query based on filters
+        query = {}
+        if tag_list:
+            query['tags'] = {'$in': tag_list}  # Match blogs with any of the selected tags
+
+        # Fetch filtered blogs from the database
+        projects = list(mongo_projects.db.projects_lists.find(query))
+
+        # Get all unique tags for the filter dropdown
+        tags = mongo_projects.db.projects_lists.distinct('tags')
+        # Render the filtered blogs to the UI
+        return render_template('portfolio.html', projects=projects, tags=tags)
+
+    except Exception as e:
+        return jsonify({'message': f'Error: {str(e)}'}), 500
 
 @app.route('/portfolio')
 def portfolio():
-    return render_template('portfolio.html')
+    if mongo is None:
+        return "Database connection error", 500  # Handle connection error
+    projects = mongo_projects.db.projects_lists.find()
+    projects = list(projects)
+
+    # Get all unique tags for the filter dropdown
+    tags = mongo_projects.db.projects_lists.distinct('tags')
+    return render_template("portfolio.html", projects=projects , tags = tags)
+    
 
 @app.route('/contact')
 def contact():
@@ -89,7 +150,44 @@ def delete_blog(blog_id):
     mongo.db.blogs_lists.delete_one({"_id": ObjectId(blog_id)})
     return redirect(url_for("blog"))
 
-###################################################################################
+################################# Project Operation #########################################
+@app.route("/add_projects", methods=["GET", "POST"])
+def add_projects():
+    if request.method == "POST":
+        project_name = request.form.get("project_name")
+        description = request.form.get("description")
+        image = request.form.get("icon")
+        link = request.form.get("link")
+        show_on_main = 'show_on_main' in request.form
+        
+        # Handle file upload for the skill icon
+        if 'icon' not in request.files:
+            return "No file part", 400
+        file = request.files['icon']
+        if file.filename == '':
+            return "No selected file", 400
+        
+        # Secure the filename and save the file
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        # Create the URL for the uploaded icon
+        icon_url = url_for('static', filename='uploads/' + filename)
+
+        # Create a new skill entry
+        new_project = {
+            "title": project_name,
+            "description": description,
+            "link": link,
+            "image_url" : icon_url,
+            "show_on_main" : show_on_main
+        }
+        
+        mongo_projects.db.projects_lists.insert_one(new_project)
+        return redirect(url_for("/"))  # Redirect to the about page or wherever you want
+
+    return render_template("add_projects.html") 
 
 ################################## Skill OPERATIONS ####################################
 
@@ -135,59 +233,82 @@ import json
 # Ensure the upload folder exists
 import os
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+import re
 
-
-def parse_markdown(md_content):
-    """Parse Markdown content into a structured JSON format."""
-    lines = md_content.splitlines()
-    result = {
-        'h1': '',
-        'h2': '',
-        'h3': '',
-        'h4': '',
-        'images': [],  # Use a list to store multiple images
-        'code': '',
-        'text': []
+def parse_markdown(content):
+        # Define patterns for each Markdown element
+    patterns = {
+        "heading_1": r"^#\s+(.*)$",          # Matches Heading 1 (# Heading)
+        "heading_2": r"^##\s+(.*)$",         # Matches Heading 2 (## Heading)
+        "heading_3": r"^###\s+(.*)$",        # Matches Heading 3 (### Heading)
+        "heading_4": r"^####\s+(.*)$",       # Matches Heading 4 (#### Heading)
+        "code_block": r"```([\s\S]*?)```",   # Matches code blocks
+        "image": r"!\[.*?\]\((.*?)\)",       # Matches Markdown images
+        "text": r"^[^#!\n`][^\n]*$"          # Matches normal text
     }
-
-    code_content = []
-    is_code_block = False
-
-    for line in lines:
-        line = line.strip()
-
-        # Handle headings
-        if line.startswith('# '):
-            result['h1'] = line[2:].strip()
-        elif line.startswith('## '):
-            result['h2'] = line[3:].strip()
-        elif line.startswith('### '):
-            result['h3'] = line[4:].strip()
-        elif line.startswith('#### '):
-            result['h4'] = line[5:].strip()
-
-        # Handle images (append to list)
-        elif line.startswith('!['):
-            start = line.find('(') + 1
-            end = line.find(')')
-            if start > 0 and end > start:
-                result['images'].append(line[start:end])
-
-        # Handle code blocks
-        elif line.startswith('```'):
-            is_code_block = not is_code_block
-            if not is_code_block and code_content:
-                result['code'] = '\n'.join(code_content)
-                code_content = []
-        elif is_code_block:
-            code_content.append(line)
-
-        # Handle regular text
-        elif line and not is_code_block:
-            result['text'].append(line)
-
-    return result
-
+    
+    # Priority order to parse content
+    priority = ["heading_1", "heading_2", "heading_3", "heading_4", "code_block", "image", "text"]
+    
+    # Initialize results list
+    results = []
+    
+    # Split content into lines while preserving code blocks
+    lines = content.strip().split('\n')
+    
+    # Process content line by line
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        
+        # Skip empty lines
+        if not line:
+            i += 1
+            continue
+            
+        # Handle code blocks first
+        if line.startswith('```'):
+            code_content = []
+            i += 1  # Skip the opening ```
+            while i < len(lines) and not lines[i].strip().endswith('```'):
+                code_content.append(lines[i])
+                i += 1
+            if i < len(lines):  # Add the last line without the closing ```
+                code_content.append(lines[i].strip().rstrip('`'))
+            results.append({
+                'type': 'code_block',
+                'content': '\n'.join(code_content)
+            })
+            i += 1
+            continue
+            
+        # Check for headings
+        for heading_type in ["heading_1", "heading_2", "heading_3", "heading_4"]:
+            match = re.match(patterns[heading_type], line)
+            if match:
+                heading_content = match.group(1).strip()  
+                results.append({
+                    'type': heading_type,
+                    'content': heading_content
+                })
+                break
+        else:
+            # Check for images
+            image_match = re.search(patterns["image"], line)
+            if image_match:
+                results.append({
+                    'type': 'image',
+                    'content': image_match.group(1)
+                })
+            # Check for regular text
+            elif re.match(patterns["text"], line):
+                results.append({
+                    'type': 'text',
+                    'content': line
+                })
+        i += 1
+    
+    return results
 
 
 @app.route("/add", methods=["GET", "POST"])
@@ -262,6 +383,8 @@ def filter_blogs():
         # Get filter parameters
         month = request.args.get('month')
         year = request.args.get('year')
+        tags = request.args.get('tags')  # Get tags as a comma-separated string
+        tag_list = tags.split(',') if tags else []
 
         # Create a query based on filters
         query = {}
@@ -269,12 +392,17 @@ def filter_blogs():
             query['edit_date'] = {'$regex': f'^{year}'}  # Year at the start
         if month:
             query['edit_date'] = {'$regex': f'-{month}-'}  # Match specific month
+        if tag_list:
+            query['tags'] = {'$in': tag_list}  # Match blogs with any of the selected tags
 
         # Fetch filtered blogs from the database
         blogs = list(mongo_blogs.db.blogs_lists.find(query))
 
+        # Get all unique tags for the filter dropdown
+        tags = mongo_blogs.db.blogs_lists.distinct('tags')
+
         # Render the filtered blogs to the UI
-        return render_template('blog.html', blogs=blogs)
+        return render_template('blog.html', blogs=blogs, tags=tags)
 
     except Exception as e:
         return jsonify({'message': f'Error: {str(e)}'}), 500
