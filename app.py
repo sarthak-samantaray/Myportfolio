@@ -6,6 +6,7 @@ from bson import json_util
 from flask import request
 import json
 from datetime import datetime
+from flask import abort
 
 
 app = Flask(__name__)
@@ -138,6 +139,104 @@ def about():
     skills = mongo_skills.db.skills_details.find()
     return render_template('about.html',skills=skills) 
 
+@app.route("/admin")
+def admin():
+    return render_template("admin.html")
+
+
+@app.route("/save_updated_blog/<blog_id>")
+def sae_updated_blog(blog_id):
+    try:
+        # Get form data
+        title = request.form.get('title')
+        description = request.form.get('description')
+        tags = request.form.get('tags').split(',')
+        tags = [tag.strip() for tag in tags]  # Clean up whitespace
+        reading_time = request.form.get('reading_time')
+        content = request.form.get('content')
+        edit_date = request.form.get('edit_date')
+
+        # Handle thumbnail update
+        if 'thumbnail' in request.files and request.files['thumbnail'].filename != '':
+            thumbnail = request.files['thumbnail']
+            thumbnail_filename = secure_filename(thumbnail.filename)
+            thumbnail.save(os.path.join('static/uploads', thumbnail_filename))
+        else:
+            thumbnail_filename = request.form.get('current_thumbnail')
+
+        # Update document in MongoDB
+        update_data = {
+            "title": title,
+            "description": description,
+            "tags": tags,
+            "reading_time": reading_time,
+            "content": content,
+            "edit_date": edit_date,
+            "thumbnail": thumbnail_filename
+        }
+
+        mongo_blogs.db.blogs_lists.update_one(
+            {"_id": ObjectId(blog_id)},
+            {"$set": update_data}
+        )
+
+        return redirect(url_for('edit_blogs'))
+
+    except Exception as e:
+        print(f"Error updating blog: {e}")
+
+
+
+
+# Utility function to fetch a blog by ID
+def get_blog_by_id(blog_id):
+    try:
+        blog = mongo_blogs.db.blogs_lists.find_one({"_id": ObjectId(blog_id)})  # Ensure ObjectId is used
+    except Exception:
+        abort(404)  # Return 404 if the ID is invalid
+    if blog is None:
+        abort(404)  # Return 404 if the blog is not found
+    return blog
+
+@app.route("/update_blog/<blog_id>", methods=["GET", "POST"])
+def update_blog(blog_id):
+    blog = get_blog_by_id(blog_id)  # Retrieve the blog post
+    if request.method == "POST":
+        # Handle the form submission
+        updated_data = {
+            "title": request.form["title"],
+            "description": request.form["description"],
+            "tags": request.form["tags"].split(","),
+            "content": request.form["content"],
+            "reading_time": int(request.form["reading_time"]),
+            "edit_date": request.form["edit_date"],
+        }
+
+        # Handle the thumbnail update
+        if "thumbnail" in request.files:
+            thumbnail = request.files["thumbnail"]
+            if thumbnail.filename:  # Only update if a new file is uploaded
+                thumbnail.save(f"static/uploads/{thumbnail.filename}")
+                updated_data["thumbnail"] = thumbnail.filename
+            else:
+                updated_data["thumbnail"] = request.form["current_thumbnail"]
+
+        mongo_blogs.db.blogs_lists.update_one({"_id": ObjectId(blog_id)}, {"$set": updated_data})
+        return redirect(url_for("edit_blogs"))
+    return render_template("update_blog.html", blog=blog)
+
+@app.route('/edit_blogs')
+def edit_blogs():
+    if mongo is None:
+        return "Database connection error", 500  # Handle connection error
+    blogs = mongo_blogs.db.blogs_lists.find()  # Corrected `mongo_blogs`
+    blogs_list = list(blogs)
+
+    # Get all unique tags for the filter dropdown
+    tags = mongo_blogs.db.blogs_lists.distinct('tags')  # Corrected `mongo_blogs`
+    return render_template("edit_blogs.html", blogs=blogs_list, tags=tags)
+
+
 
 ################################## BLOG OPERATIONS ####################################
 
@@ -147,8 +246,8 @@ def about():
 def delete_blog(blog_id):
     if mongo is None:
         return "Database connection error", 500  # Handle connection error
-    mongo.db.blogs_lists.delete_one({"_id": ObjectId(blog_id)})
-    return redirect(url_for("blog"))
+    mongo_blogs.db.blogs_lists.delete_one({"_id": ObjectId(blog_id)})
+    return redirect(url_for("edit_blogs"))
 
 ################################# Project Operation #########################################
 @app.route("/add_projects", methods=["GET", "POST"])
@@ -159,6 +258,7 @@ def add_projects():
         image = request.form.get("icon")
         link = request.form.get("link")
         show_on_main = 'show_on_main' in request.form
+        tags = request.form.get("tags")
         
         # Handle file upload for the skill icon
         if 'icon' not in request.files:
@@ -181,11 +281,12 @@ def add_projects():
             "description": description,
             "link": link,
             "image_url" : icon_url,
-            "show_on_main" : show_on_main
+            "show_on_main" : show_on_main,
+            "tags" : tags
         }
         
         mongo_projects.db.projects_lists.insert_one(new_project)
-        return redirect(url_for("/"))  # Redirect to the about page or wherever you want
+        return redirect("/")  # Redirect to the about page or wherever you want
 
     return render_template("add_projects.html") 
 
@@ -369,8 +470,9 @@ def save():
         # Save the blog data to MongoDB
         result = mongo_blogs.db.blogs_lists.insert_one(parsed_content)
 
+        
         # Return response with the result
-        return jsonify({'message': 'Blog saved successfully', 'id': str(result.inserted_id)}), 200
+        return redirect(url_for('blog'))         
 
     except Exception as e:
         # Handle any unexpected errors

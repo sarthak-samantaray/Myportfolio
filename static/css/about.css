@@ -73,7 +73,7 @@
 
 /* General container styling */
 .intro-container {
-    padding-left: 350px;
+    padding-left: 200px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -126,7 +126,7 @@
   
   /* Skills Heading */
   .skills-heading {
-    padding-left: 350px;
+    padding-left: 200px;
     color: #fff;
     font-size: 2rem;
     margin-bottom: 15px;
@@ -134,7 +134,7 @@
   
   /* Skills List */
   .skills-list {
-    padding-left: 350px;
+    padding-left: 200px;
     display: grid;
     max-width: 800px;
     grid-template-columns: repeat(2, max-content); /* Two columns */
@@ -175,14 +175,14 @@
     margin-bottom: 50px;
     margin-top : 80px;
     max-width: 900px;
-    padding-left: 350px;
+    padding-left: 200px;
   }
 .soft-skills-container p{
     color : #9A9A9A
 }
 
 .checklist-section{
-    padding-left: 350px;
+    padding-left: 200px;
     margin-bottom: 50px;
     margin-top : 80px;
 }
@@ -267,7 +267,7 @@
         }
 
         #popup img {
-            width: 150px;
+            width: 100px;
             height: auto;
             margin-bottom: 10px;
             transform: rotate(30deg);
@@ -276,7 +276,7 @@
         }
 
         #popup p {
-            font-size: 1.2rem;
+            font-size: 0.8rem;
             color: #fff;
         }
 
@@ -291,3 +291,42 @@
             border-radius: 5px;
             margin-top: 10px;
         }
+        .custom-footer {
+            padding: 20px;
+            margin-top: 40px;
+          }
+          
+          .footer-line {
+            border: none;
+            height: 1px;
+            background-color: #9a9a9a;
+            opacity: 0.5;
+            margin-bottom: 20px;
+            margin-top: 20px;
+          }
+          
+          .footer-content {
+            display: flex;
+            gap: 300px;
+            justify-content: center;
+          }
+          
+          .footer-label {
+            color: #fff;
+            font-weight: 500;
+          }
+          
+          .footer-value {
+            color: #9a9a9a;
+          }
+          
+          /* Optional: Add responsiveness */
+          @media (max-width: 768px) {
+            .footer-content {
+                gap: 8px;
+            }
+            
+            .custom-footer {
+                padding: 15px;
+            }
+          }

@@ -92,7 +92,7 @@
   margin-top: -50px;
 }
 .projects-lists {
-  padding-left: 350px;
+  padding-left: 200px;
   margin-bottom: 300px;
   margin-top : 80px;
   display: flex;
@@ -193,7 +193,7 @@
 /* Make the container center of the screen */
 .filter-container {
   display: flex;
-  padding-left: 330px;
+  padding-left: 180px;
 }
 
 /* Style the filter box */
@@ -281,5 +281,44 @@ select {
 
   .filter-row {
       width: 100%;
+  }
+}
+.custom-footer {
+  padding: 20px;
+  margin-top: 40px;
+}
+
+.footer-line {
+  border: none;
+  height: 1px;
+  background-color: #9a9a9a;
+  opacity: 0.5;
+  margin-bottom: 20px;
+  margin-top: 50px;
+}
+
+.footer-content {
+  display: flex;
+  gap: 300px;
+  justify-content: center;
+}
+
+.footer-label {
+  color: #fff;
+  font-weight: 500;
+}
+
+.footer-value {
+  color: #9a9a9a;
+}
+
+/* Optional: Add responsiveness */
+@media (max-width: 768px) {
+  .footer-content {
+      gap: 8px;
+  }
+  
+  .custom-footer {
+      padding: 15px;
   }
 }

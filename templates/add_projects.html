@@ -95,7 +95,7 @@
 <body>
 
     <div class="container">
-        <h1>Add a New Skill</h1>
+        <h1>Add a New Project</h1>
         <form action="{{ url_for('add_projects') }}" method="POST" enctype="multipart/form-data">
             <label for="project_name">Project Name</label>
             <input type="text" id="project_name" name="project_name" required>
@@ -108,12 +108,15 @@
         
             <label for="link">Link</label>
             <input type="text" id="link" name="link" required>
+
+            <label for="tags">Tags</label>
+            <input type="text" id="tags" name="tags" required placeholder="Remember to add only 1 tag">
         
             <label for="show_on_main">
                 <input type="checkbox" id="show_on_main" name="show_on_main"> Show on Main Page
             </label>
         
-            <button type="submit">Add Skill</button>
+            <button type="submit">Add Project</button>
         </form>
 
         <a href="{{ url_for('about') }}">Back to About</a>

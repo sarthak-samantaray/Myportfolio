@@ -136,22 +136,28 @@
     margin-right: 20px;
 }
 
+.tags-container {
+    display: flex;
+    flex-wrap: wrap; /* Allows tags to wrap to the next line */
+}
+
 .tag {
     background-color: #1f1e23;
     padding: 5px 10px;
     border-radius: 15px;
     font-size: 0.85em;
-    margin-right: 10px;
+    margin-right: 20px;
     color: #fff;
-    display: inline-block;
-    margin-bottom: 100px;
+    display: inline-flex;
+    margin-bottom: 20px; /* Adjusted for better spacing */
 }
 .thumbnail {
     width: 100%;
     max-height: 400px;
-    object-fit: cover;
+    object-fit: fit;
     border-radius: 8px;
     margin: 20px 0;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .content-item {
@@ -192,15 +198,40 @@
 }
 
 /* Code blocks */
+/* Code Block Styling */
 .code_block {
     padding: 20px;
     border-radius: 5px;
     font-family: 'Fira Code', 'Consolas', monospace;
-    font-size: 0.9em;
-    white-space: pre;
-    overflow-x: auto;
-    border: 1px solid #e9ecef;
+    font-size: 1rem;
+    white-space: pre-wrap; /* Wraps text when necessary */
+    word-wrap: break-word; /* Prevents long words from overflowing */
+    overflow-x: auto; /* Horizontal scrolling for long code lines */
+    background-color: #2d2d2d; /* Dark background color */
+    color: #dcdcdc; /* Light gray text color */
+    border: 1px solid #444444; /* Dark border color */
     margin: 25px 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.code_block code {
+    display: block;
+    white-space: pre-wrap;
+}
+
+/* Optional: Styling the scrollbars for better visibility */
+.code_block::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.code_block::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 6px;
+}
+
+.code_block::-webkit-scrollbar-thumb:hover {
+    background-color: #555;
 }
 
 /* Text */
@@ -255,3 +286,41 @@
 .tags-container{
     margin-top: 50px;
 }
+.custom-footer {
+    padding: 20px;
+    margin-top: 40px;
+  }
+  
+  .footer-line {
+    border: none;
+    height: 1px;
+    background-color: #9a9a9a;
+    opacity: 0.5;
+    margin-bottom: 20px;
+  }
+  
+  .footer-content {
+    display: flex;
+    gap: 500px;
+    justify-content: center;
+  }
+  
+  .footer-label {
+    color: #fff;
+    font-weight: 500;
+  }
+  
+  .footer-value {
+    color: #9a9a9a;
+  }
+  
+  /* Optional: Add responsiveness */
+  @media (max-width: 768px) {
+    .footer-content {
+        gap: 8px;
+    }
+    
+    .custom-footer {
+        padding: 15px;
+    }
+  }

@@ -73,7 +73,7 @@
   /* padding-left: 1300px; */
   margin-top: -150px;
   max-width: 300px;
-  margin-left: 1300px;
+  margin-left: 1100px;
   margin-bottom: -90px;
 }
   .filter-box {
@@ -136,7 +136,7 @@
   /* blog-styles.css */
 .blog-headings{
   margin-top: 200px;
-  padding-left: 300px;
+  padding-left: 200px;
   max-width: 1000px;
 }
 .blog-headings p{
@@ -147,7 +147,7 @@
   color : #9A9A9A
 }
 .blog-container{
-  padding-left: 300px;
+  padding-left: 200px;
   max-width: 1000px;
   margin-top: -200px;
 }
@@ -241,4 +241,43 @@
   color: #9a9a9a;
   font-size: 0.9rem;
   margin-bottom: 12px;
+}
+.custom-footer {
+  padding: 20px;
+  margin-top: 40px;
+}
+
+.footer-line {
+  border: none;
+  height: 1px;
+  background-color: #9a9a9a;
+  opacity: 0.5;
+  margin-bottom: 20px;
+  margin-top: 50px;
+}
+
+.footer-content {
+  display: flex;
+  gap: 300px;
+  justify-content: center;
+}
+
+.footer-label {
+  color: #fff;
+  font-weight: 500;
+}
+
+.footer-value {
+  color: #9a9a9a;
+}
+
+/* Optional: Add responsiveness */
+@media (max-width: 768px) {
+  .footer-content {
+      gap: 8px;
+  }
+  
+  .custom-footer {
+      padding: 15px;
+  }
 }

@@ -77,7 +77,7 @@ h2{
 .hero {
   margin: 4rem 0;
   padding-top: 80px;
-  padding-left: 350px;
+  padding-left: 200px;
   margin-bottom: 300px;
   margin-top : 150px;
   /* background-image: url('/static/images/illustrations/page-title.png'); */
@@ -122,11 +122,11 @@ h2{
 
 /* PROJECTS */
 .project-section h2{
-  padding-left: 350px;
+  padding-left: 200px;
   font-size: 3rem;
 }
 .projects-lists {
-  padding-left: 350px;
+  padding-left: 200px;
   margin-bottom: 300px;
   margin-top : 80px;
   display: flex;
@@ -227,11 +227,11 @@ h2{
 
 /* General CSS updates for Experience Section */
 .section h2{
-  padding-left: 350px;
+  padding-left: 200px;
   font-size: 3rem
 }
 .experience-item {
-  padding-left: 350px;
+  padding-left: 200px;
   display: flex;
   align-items: flex-start;
   margin-bottom: 8.5rem;
@@ -241,7 +241,7 @@ h2{
 .experience-item:not(:last-child)::before {
   content: '';
   position: absolute;
-  left: 26.5rem; /* Aligns the line correctly */
+  left: 15.5rem; /* Aligns the line correctly */
   top: 1rem;
   bottom: -6rem; /* Extends the line between items */
   width: 2px; /* Thickness of the line */
@@ -251,8 +251,8 @@ h2{
 }
 
 .experience-logo img {
-  width: 150px;
-  height: 150px;
+  width: 100px;
+  height: 100px;
   object-fit: contain;
   z-index: 2;
   border-radius: 50%;
@@ -298,4 +298,43 @@ h2{
   border-radius: 8px;
   text-align: center;
   font-family: 'Lekton', monospace;
+}
+
+.custom-footer {
+  padding: 20px;
+  margin-top: 40px;
+}
+
+.footer-line {
+  border: none;
+  height: 1px;
+  background-color: #9a9a9a;
+  opacity: 0.5;
+  margin-bottom: 20px;
+}
+
+.footer-content {
+  display: flex;
+  gap: 300px;
+  justify-content: center;
+}
+
+.footer-label {
+  color: #fff;
+  font-weight: 500;
+}
+
+.footer-value {
+  color: #9a9a9a;
+}
+
+/* Optional: Add responsiveness */
+@media (max-width: 768px) {
+  .footer-content {
+      gap: 8px;
+  }
+  
+  .custom-footer {
+      padding: 15px;
+  }
 }
