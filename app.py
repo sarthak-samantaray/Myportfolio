@@ -9,20 +9,39 @@ from datetime import datetime
 from flask import abort
 
 
+from flask import Flask, render_template, request, redirect, session, flash
+from flask_mail import Mail, Message
+import random
+import string
+import twilio
+from twilio.rest import Client
+import os
+from dotenv import load_dotenv
+from pymongo import MongoClient
+load_dotenv()
+
 app = Flask(__name__)
 
-# MongoDB Configuration
-app.config["MONGO_URI"] = "mongodb://localhost:27017/blogs"
-mongo_blogs = PyMongo(app)
+mongo_client = MongoClient(os.getenv('MONGO_URI'))
+app.config['MONGO_URI'] = os.getenv('MONGO_URI')
 
-app.config["MONGO_URI"] = "mongodb://localhost:27017/projects"
-mongo_projects = PyMongo(app)
+# Create database instances
+mongo_blogs = mongo_client['blogs']
+mongo_projects = mongo_client['projects']
+mongo_skills = mongo_client['skills']
 
-app.config["MONGO_URI"] = "mongodb://localhost:27017/skills"
-mongo_skills = PyMongo(app)
+app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER')  # Directory to save uploaded files
 
-app.config['UPLOAD_FOLDER'] = 'static/uploads'  # Directory to save uploaded files
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit upload size to 16 MB
+app.secret_key = os.getenv('SECRET_KEY')  # Replace with a strong secret key
+app.config['SESSION_TYPE'] = os.getenv('SESSION_TYPE')
+
+# Twilio configuration
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')  # Replace with your Twilio account SID
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')  # Replace with your Twilio Auth Token
+TWILIO_PHONE_NUMBER = '+12294751444'  # Replace with your Twilio phone number
+
+# Admin credentials
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD') # Replace with a secure password
 
 
 try:
@@ -31,13 +50,72 @@ except Exception as e:
     print(f"Error connecting to MongoDB: {e}")
     mongo = None  # Ensure mongo is None if connection fails
 
+# Twilio client setup
+twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+
+
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        # Step 1: Verify password
+        password = request.form.get('password')
+        if password == ADMIN_PASSWORD:
+            # Step 2: Ask for phone number
+            return render_template('login_verify.html', stage="phone_number")  # Show phone number form
+        else:
+            flash("Incorrect password. Please try again.", "danger")
+            return render_template('login_verify.html', stage="password")  # Show password form
+
+    # Default to password entry
+    return render_template('login_verify.html', stage="password")
+
+@app.route('/verify_phone', methods=['POST'])
+def verify_phone():
+    phone_number = request.form.get('phone_number')
+    
+    # Generate OTP
+    otp = ''.join(random.choices(string.digits, k=6))
+    session['otp'] = otp  # Store OTP in session
+    session['otp_verified'] = False
+
+    # Step 3: Send OTP via SMS using Twilio
+    try:
+        message = twilio_client.messages.create(
+            body=f"Your OTP for admin login is: {otp}",
+            from_=TWILIO_PHONE_NUMBER,  # Your Twilio phone number
+            to=phone_number  # Phone number entered by the user
+        )
+        flash("OTP sent to your phone. Please verify to proceed.", "info")
+        return render_template('login_verify.html', stage="otp")  # Show OTP form
+    except Exception as e:
+        flash(f"Failed to send OTP: {str(e)}", "danger")
+        return render_template('login_verify.html', stage="phone_number")  # Show phone number form again
+
+@app.route('/verify_otp', methods=['POST'])
+def verify_otp():
+    user_otp = request.form.get('otp')
+    if user_otp == session.get('otp'):
+        session['otp_verified'] = True  # Mark OTP as verified
+        flash("Login successful. Welcome to the admin dashboard.", "success")
+        return redirect('/admin_dashboard')  # Redirect to the admin dashboard
+    else:
+        flash("Invalid OTP. Please try again.", "danger")
+        return render_template('login_verify.html', stage="otp")
+
+@app.route('/admin_dashboard')
+def admin_dashboard():
+    if not session.get('otp_verified'):
+        flash("Unauthorized access. Please log in.", "danger")
+        return redirect('/admin')  # Redirect to login
+    return render_template('edit_everything.html')  # Replace wit # Replace with your admin dashboard template
 # Home Route
 @app.route("/")
 def home():
     try:
-        blogs = mongo_blogs.db.blogs_lists.find()
-        projects = mongo_projects.db.projects_lists.find({'show_on_main': True})  # Filter projects
-        skills = mongo_skills.db.skills_details.find()
+        blogs = mongo_blogs.blogs_lists.find()
+        projects = mongo_projects.projects_lists.find({'show_on_main': True})  # Filter projects
+        skills = mongo_skills.skills_details.find()
         print(skills)  # Fetch skills from the skills_details collection
 
     except Exception as e:
@@ -51,11 +129,11 @@ def home():
 def blog():
     if mongo is None:
         return "Database connection error", 500  # Handle connection error
-    blogs = mongo_blogs.db.blogs_lists.find()
+    blogs = mongo_blogs.blogs_lists.find()
     blogs_list = list(blogs)
 
     # Get all unique tags for the filter dropdown
-    tags = mongo_blogs.db.blogs_lists.distinct('tags')
+    tags = mongo_blogs.blogs_lists.distinct('tags')
     return render_template("blog.html", blogs=blogs_list , tags = tags)
 
 # Blog Detail Page
@@ -68,7 +146,7 @@ def blog_detail(blog_id):
             return "Database connection error", 500
 
         # Fetch a single blog by ID
-        blog_post = mongo_blogs.db.blogs_lists.find_one({"_id": ObjectId(blog_id)})
+        blog_post = mongo_blogs.blogs_lists.find_one({"_id": ObjectId(blog_id)})
         print(blog_post)
         # Check if the blog exists
         if not blog_post:
@@ -88,7 +166,7 @@ def blog_detail(blog_id):
                                 content=parsed_content,
                                 formatted_date=formatted_date)
         else:
-            all_ids = [str(post['_id']) for post in mongo_blogs.db.blogs_lists.find({}, {'_id': 1})]
+            all_ids = [str(post['_id']) for post in mongo_blogs.blogs_lists.find({}, {'_id': 1})]
             return f"Blog post with ID '675e76aa2f1568af4d8a10c2' not found. Available blog IDs: {all_ids}", 404
 
 
@@ -107,10 +185,10 @@ def fiter_projects():
             query['tags'] = {'$in': tag_list}  # Match blogs with any of the selected tags
 
         # Fetch filtered blogs from the database
-        projects = list(mongo_projects.db.projects_lists.find(query))
+        projects = list(mongo_projects.projects_lists.find(query))
 
         # Get all unique tags for the filter dropdown
-        tags = mongo_projects.db.projects_lists.distinct('tags')
+        tags = mongo_projects.projects_lists.distinct('tags')
         # Render the filtered blogs to the UI
         return render_template('portfolio.html', projects=projects, tags=tags)
 
@@ -121,11 +199,11 @@ def fiter_projects():
 def portfolio():
     if mongo is None:
         return "Database connection error", 500  # Handle connection error
-    projects = mongo_projects.db.projects_lists.find()
+    projects = mongo_projects.projects_lists.find()
     projects = list(projects)
 
     # Get all unique tags for the filter dropdown
-    tags = mongo_projects.db.projects_lists.distinct('tags')
+    tags = mongo_projects.projects_lists.distinct('tags')
     return render_template("portfolio.html", projects=projects , tags = tags)
     
 
@@ -136,13 +214,8 @@ def contact():
 
 @app.route('/about') 
 def about():
-    skills = mongo_skills.db.skills_details.find()
+    skills = mongo_skills.skills_details.find()
     return render_template('about.html',skills=skills) 
-
-@app.route("/admin")
-def admin():
-    return render_template("admin.html")
-
 
 @app.route("/save_updated_blog/<blog_id>")
 def sae_updated_blog(blog_id):
@@ -175,7 +248,7 @@ def sae_updated_blog(blog_id):
             "thumbnail": thumbnail_filename
         }
 
-        mongo_blogs.db.blogs_lists.update_one(
+        mongo_blogs.blogs_lists.update_one(
             {"_id": ObjectId(blog_id)},
             {"$set": update_data}
         )
@@ -191,7 +264,7 @@ def sae_updated_blog(blog_id):
 # Utility function to fetch a blog by ID
 def get_blog_by_id(blog_id):
     try:
-        blog = mongo_blogs.db.blogs_lists.find_one({"_id": ObjectId(blog_id)})  # Ensure ObjectId is used
+        blog = mongo_blogs.blogs_lists.find_one({"_id": ObjectId(blog_id)})  # Ensure ObjectId is used
     except Exception:
         abort(404)  # Return 404 if the ID is invalid
     if blog is None:
@@ -221,7 +294,7 @@ def update_blog(blog_id):
             else:
                 updated_data["thumbnail"] = request.form["current_thumbnail"]
 
-        mongo_blogs.db.blogs_lists.update_one({"_id": ObjectId(blog_id)}, {"$set": updated_data})
+        mongo_blogs.blogs_lists.update_one({"_id": ObjectId(blog_id)}, {"$set": updated_data})
         return redirect(url_for("edit_blogs"))
     return render_template("update_blog.html", blog=blog)
 
@@ -229,11 +302,11 @@ def update_blog(blog_id):
 def edit_blogs():
     if mongo is None:
         return "Database connection error", 500  # Handle connection error
-    blogs = mongo_blogs.db.blogs_lists.find()  # Corrected `mongo_blogs`
+    blogs = mongo_blogs.blogs_lists.find()  # Corrected `mongo_blogs`
     blogs_list = list(blogs)
 
     # Get all unique tags for the filter dropdown
-    tags = mongo_blogs.db.blogs_lists.distinct('tags')  # Corrected `mongo_blogs`
+    tags = mongo_blogs.blogs_lists.distinct('tags')  # Corrected `mongo_blogs`
     return render_template("edit_blogs.html", blogs=blogs_list, tags=tags)
 
 
@@ -246,7 +319,7 @@ def edit_blogs():
 def delete_blog(blog_id):
     if mongo is None:
         return "Database connection error", 500  # Handle connection error
-    mongo_blogs.db.blogs_lists.delete_one({"_id": ObjectId(blog_id)})
+    mongo_blogs.blogs_lists.delete_one({"_id": ObjectId(blog_id)})
     return redirect(url_for("edit_blogs"))
 
 ################################# Project Operation #########################################
@@ -285,7 +358,7 @@ def add_projects():
             "tags" : tags
         }
         
-        mongo_projects.db.projects_lists.insert_one(new_project)
+        mongo_projects.projects_lists.insert_one(new_project)
         return redirect("/")  # Redirect to the about page or wherever you want
 
     return render_template("add_projects.html") 
@@ -311,7 +384,7 @@ def add_skills():
         file.save(file_path)
         
         # Create the URL for the uploaded icon
-        icon_url = url_for('static', filename='images/skill_logos/' + filename)
+        icon_url = url_for('static', filename='uploads/' + filename)
 
         # Create a new skill entry
         new_skill = {
@@ -320,7 +393,7 @@ def add_skills():
             "percentage": percentage
         }
         
-        mongo_skills.db.skills_details.insert_one(new_skill)
+        mongo_skills.skills_details.insert_one(new_skill)
         return redirect(url_for("about"))  # Redirect to the about page or wherever you want
 
     return render_template("add_skills.html")  # Create a template for adding skills
@@ -333,6 +406,7 @@ import json
 # Add Blog Page
 # Ensure the upload folder exists
 import os
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 import re
 
@@ -468,7 +542,7 @@ def save():
         }
 
         # Save the blog data to MongoDB
-        result = mongo_blogs.db.blogs_lists.insert_one(parsed_content)
+        result = mongo_blogs.blogs_lists.insert_one(parsed_content)
 
         
         # Return response with the result
@@ -498,10 +572,10 @@ def filter_blogs():
             query['tags'] = {'$in': tag_list}  # Match blogs with any of the selected tags
 
         # Fetch filtered blogs from the database
-        blogs = list(mongo_blogs.db.blogs_lists.find(query))
+        blogs = list(mongo_blogs.blogs_lists.find(query))
 
         # Get all unique tags for the filter dropdown
-        tags = mongo_blogs.db.blogs_lists.distinct('tags')
+        tags = mongo_blogs.blogs_lists.distinct('tags')
 
         # Render the filtered blogs to the UI
         return render_template('blog.html', blogs=blogs, tags=tags)

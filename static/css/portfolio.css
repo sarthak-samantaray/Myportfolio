@@ -153,9 +153,10 @@
 }
 
 .project-description {
-  font-size: 16px;
-  color: #666;
+  font-size: 18px;
+  color: #111111;
   margin-bottom: 20px;
+  font-style: bold;
   opacity: 0;  /* Initially hidden */
   transition: opacity 0.3s ease; /* Smooth opacity transition */
 }
@@ -169,6 +170,16 @@
   text-decoration: none;
   font-weight: bold;
   transition: opacity 0.3s ease;
+}
+.project-image{
+  width: 100%;
+  object-fit: fit;
+  border-radius: 8px;
+  transition: transform 0.3s ease; 
+}
+
+.project-card:hover .project-image{
+  visibility: hidden;
 }
 
 .project-card:hover .project-description {
@@ -194,6 +205,7 @@
 .filter-container {
   display: flex;
   padding-left: 180px;
+  margin-top: 100px;
 }
 
 /* Style the filter box */

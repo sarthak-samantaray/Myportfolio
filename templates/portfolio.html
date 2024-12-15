@@ -62,7 +62,7 @@
 
     <div class="filter-container">
         <div class="filter-box">
-            <h3>Filter Blogs</h3>
+            <h3>Filter Projects</h3>
             <form id="filter-form" method="GET" action="/filter_projects">
                 <div class="filter-row">
                     <!-- Tags -->
@@ -143,18 +143,22 @@
             }
         });
     </script>
-    <div class = "project-section">
+      <div class="project-section">
         <div class="projects-lists">
-          {% for project in projects %}
-          <div class="project-card">
-            <h3 class="project-title">{{ project.title }}</h3>
-              <div class="project-content">
-                  <p class="project-description">{{ project.description }}</p>
-                  <a href="{{ project.github_link }}" class="project-link" target="_blank">View on GitHub</a>
-              </div>
-          </div>
-          {% endfor %}
-      </div>
+            {% for project in projects %}
+            <div class="project-wrapper">
+                <div class="project-card">
+                    <img src="{{ project.image_url }}" class="project-image" alt="{{ project.title }}">
+                    <div class="project-content">
+                        <p class="project-description">{{ project.description }}</p>
+                        <a href="{{ project.github_link }}" class="project-link" target="_blank">View on GitHub</a>
+                    </div>
+                </div>
+                <!-- Move the title outside the project-card -->
+                <h3 class="project-title" style="color: #9a9a9a; margin-top: 10px; text-align: center;">{{ project.title }}</h3>
+            </div>
+            {% endfor %}
+        </div>
       </div>
         <!-- Footer HTML -->
 <footer class="custom-footer">

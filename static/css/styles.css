@@ -160,6 +160,13 @@ h2{
   transform: scale(1.15); /* Slight enlargement of the card */
 }
 
+.project-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #9a9a9a;
+  margin-top: 10px; /* Space between the card and the title */
+}
+
 .project-content {
   position: absolute;
   top: 50%;
@@ -187,9 +194,10 @@ h2{
 }
 
 .project-description {
-  font-size: 16px;
-  color: #666;
+  font-size: 18px;
+  color: #111111;
   margin-bottom: 20px;
+  font-style: bold;
   opacity: 0;  /* Initially hidden */
   transition: opacity 0.3s ease; /* Smooth opacity transition */
 }
@@ -204,9 +212,19 @@ h2{
   font-weight: bold;
   transition: opacity 0.3s ease;
 }
+.project-image{
+  width: 100%;
+  object-fit: fit;
+  border-radius: 8px;
+  transition: transform 0.3s ease; 
+}
+
+.project-card:hover .project-image{
+  visibility: hidden;
+}
 
 .project-card:hover .project-description {
-  opacity: 1; ; /* Make description visible on hover */
+  opacity: 1; /* Make description visible on hover */
 }
 
 .project-card:hover .project-link {
