@@ -254,6 +254,30 @@ def save():
     except Exception as e:
         # Handle any unexpected errors
         return jsonify({'message': f'Error: {str(e)}'}), 500
+    
+
+@app.route('/filter', methods=['GET'])
+def filter_blogs():
+    try:
+        # Get filter parameters
+        month = request.args.get('month')
+        year = request.args.get('year')
+
+        # Create a query based on filters
+        query = {}
+        if year:
+            query['edit_date'] = {'$regex': f'^{year}'}  # Year at the start
+        if month:
+            query['edit_date'] = {'$regex': f'-{month}-'}  # Match specific month
+
+        # Fetch filtered blogs from the database
+        blogs = list(mongo_blogs.db.blogs_lists.find(query))
+
+        # Render the filtered blogs to the UI
+        return render_template('blog.html', blogs=blogs)
+
+    except Exception as e:
+        return jsonify({'message': f'Error: {str(e)}'}), 500
 
 
 
