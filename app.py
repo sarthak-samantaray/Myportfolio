@@ -2,6 +2,9 @@ from flask import Flask, render_template, request, redirect, url_for
 from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
+from bson import json_util
+from flask import request
+import json
 
 
 app = Flask(__name__)
@@ -46,7 +49,7 @@ def home():
 def blog():
     if mongo is None:
         return "Database connection error", 500  # Handle connection error
-    blogs = mongo.db.blogs_lists.find()
+    blogs = mongo_blogs.db.blogs_lists.find()
     blogs_list = list(blogs)
     return render_template("blog.html", blogs=blogs_list)
 
@@ -76,45 +79,7 @@ def about():
 
 
 ################################## BLOG OPERATIONS ####################################
-# Add Blog Page
-# Ensure the upload folder exists
-import os
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-@app.route("/add", methods=["GET", "POST"])
-def add_blog():
-    if request.method == "POST":
-        title = request.form.get("title")
-        tags = request.form.get("tags").split(",")
-        description = request.form.get("description")
-        
-        # Handle file upload
-        if 'image' not in request.files:
-            return "No file part", 400
-        file = request.files['image']
-        if file.filename == '':
-            return "No selected file", 400
-        
-        # Secure the filename and save the file
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-        
-        # Create the URL for the uploaded image
-        image_url = url_for('static', filename='uploads/' + filename)
-
-        # Create a new blog entry
-        new_blog = {
-            "title": title,
-            "image_url": image_url,
-            "tags": tags,
-            "description": description
-        }
-        
-        mongo.db.blogs_lists.insert_one(new_blog)
-        return redirect(url_for("blog"))  # Redirect to the blog list page
-
-    return render_template("add_blog.html")
 
 # Delete Blog Route
 @app.route("/delete/<blog_id>", methods=["POST"])
@@ -160,5 +125,137 @@ def add_skills():
         return redirect(url_for("about"))  # Redirect to the about page or wherever you want
 
     return render_template("add_skills.html")  # Create a template for adding skills
+
+
+
+
+########################################### BLOG OPERATION #####################################
+import json
+# Add Blog Page
+# Ensure the upload folder exists
+import os
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+
+def parse_markdown(md_content):
+    """Parse Markdown content into a structured JSON format."""
+    lines = md_content.splitlines()
+    result = {
+        'h1': '',
+        'h2': '',
+        'h3': '',
+        'h4': '',
+        'images': [],  # Use a list to store multiple images
+        'code': '',
+        'text': []
+    }
+
+    code_content = []
+    is_code_block = False
+
+    for line in lines:
+        line = line.strip()
+
+        # Handle headings
+        if line.startswith('# '):
+            result['h1'] = line[2:].strip()
+        elif line.startswith('## '):
+            result['h2'] = line[3:].strip()
+        elif line.startswith('### '):
+            result['h3'] = line[4:].strip()
+        elif line.startswith('#### '):
+            result['h4'] = line[5:].strip()
+
+        # Handle images (append to list)
+        elif line.startswith('!['):
+            start = line.find('(') + 1
+            end = line.find(')')
+            if start > 0 and end > start:
+                result['images'].append(line[start:end])
+
+        # Handle code blocks
+        elif line.startswith('```'):
+            is_code_block = not is_code_block
+            if not is_code_block and code_content:
+                result['code'] = '\n'.join(code_content)
+                code_content = []
+        elif is_code_block:
+            code_content.append(line)
+
+        # Handle regular text
+        elif line and not is_code_block:
+            result['text'].append(line)
+
+    return result
+
+
+
+@app.route("/add", methods=["GET", "POST"])
+def add_blog():
+    return render_template("add_blog.html")
+
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    if 'image' in request.files:
+        image = request.files['image']
+        if image.filename != '':
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], image.filename)
+            image.save(filepath)
+            return {'url': url_for('static', filename=f'uploads/{image.filename}')}, 200
+    return {'error': 'No image uploaded'}, 400
+
+from flask import jsonify
+from flask import request, jsonify
+import os
+from bson import ObjectId
+from werkzeug.utils import secure_filename
+
+@app.route('/save', methods=['POST'])
+def save():
+    try:
+        # Get form data
+        title = request.form.get('title')
+        description = request.form.get('description')
+        tags = request.form.get('tags')  # Get tags as a comma-separated string
+        edit_time = request.form.get('edit_time')
+        reading_time = request.form.get('reading_time')
+        content = request.form.get('content')
+
+        # If tags are provided, split by comma
+        if tags:
+            tags = tags.split(',')  # Convert tags into a list
+        else:
+            tags = []
+
+        # Get file data
+        thumbnail = request.files.get('thumbnail')
+        if thumbnail:
+            thumbnail_filename = secure_filename(thumbnail.filename)
+            thumbnail.save(os.path.join('static/uploads', thumbnail_filename))
+
+        # Handle the rest of the data (tags, content, etc.)
+        parsed_content = {
+            "title": title,
+            "description": description,
+            "tags": tags,  # Save the tags list
+            "edit_date": edit_time,
+            "reading_time": reading_time,
+            "content": content,
+            "thumbnail": thumbnail_filename if thumbnail else None
+        }
+
+        # Save the blog data to MongoDB
+        result = mongo_blogs.db.blogs_lists.insert_one(parsed_content)
+
+        # Return response with the result
+        return jsonify({'message': 'Blog saved successfully', 'id': str(result.inserted_id)}), 200
+
+    except Exception as e:
+        # Handle any unexpected errors
+        return jsonify({'message': f'Error: {str(e)}'}), 500
+
+
+
 if __name__ == "__main__":
     app.run(debug=True)

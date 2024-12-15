@@ -55,26 +55,45 @@
   </header>
 
   
-    <div class="container mt-5">
-        <!-- <a href="/add" class="btn btn-primary mb-3">Add New Blog</a> -->
-        <div class="row">
-            {% for blog in blogs %}
-            <div class="col-md-4">
-                <div class="card mb-4">
-                    <img src="{{ blog.image_url }}" class="card-img-top" alt="{{ blog.title }}">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ blog.title }}</h5>
-                        <p class="card-text">Tags: {{ blog.tags | join(', ') }}</p>
-                        <a href="/blog/{{ blog._id }}" class="btn btn-secondary">Read More</a>
-                        <form action="/delete/{{ blog._id }}" method="post" class="mt-2">
-                            <button type="submit" class="btn btn-danger">Delete</button>
-                        </form>
+
+<div class = "blog-headings">
+    <h2>Blog</h2>
+    <p>Welcome to my blog domain where I share personal stories about things I've learned, projects I'm hacking on and just general findings. I also write for other publications.</p>
+    <a href="https://www.linkedin.com/in/sarthaksamantaray/">Linkedin</a>
+    <a href="https://www.linkedin.com/in/sarthaksamantaray/">Linkedin</a>
+    <a href="https://www.linkedin.com/in/sarthaksamantaray/">Linkedin</a>
+    <a href="https://www.linkedin.com/in/sarthaksamantaray/">Linkedin</a>
+
+</div>
+<!-- blog-list.html -->
+<div class="blog-container">
+    <div class="row">
+        {% for blog in blogs %}
+        <div class="col-12">
+            <div class="blog-card">
+                <div class="blog-content">
+                    <img src="/static/uploads/{{blog.thumbnail }}" class="blog-image" alt="{{ blog.title }}">
+                    <div class="blog-info">
+                        <h5 class="blog-title">{{ blog.title }}</h5>
+                        <p class="blog-description">{{ blog.description }}</p>
+                        <div class="tags">Tags: {{ blog.tags | join(', ') }}</div>
+                        <div class="blog-metadata">
+                            <span><i class="fas fa-calendar-alt"></i> {{ blog.edit_date}}</span>
+                            <span><i class="fas fa-clock"></i> {{ blog.reading_time}} mins</span>
+                        </div>
+                        <div class="action-buttons">
+                            <a href="/blog/{{ blog._id }}" class="btn btn-secondary">Read More</a>
+                            <form action="/delete/{{ blog._id }}" method="post" style="display: inline;">
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
+        {% endfor %}
     </div>
+</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
