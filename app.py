@@ -17,14 +17,18 @@ import twilio
 from twilio.rest import Client
 import os
 from dotenv import load_dotenv
-from pymongo import MongoClient
+
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+import boto3
 load_dotenv()
 
 app = Flask(__name__)
 
-mongo_client = MongoClient(os.getenv('MONGO_URI'))
-app.config['MONGO_URI'] = os.getenv('MONGO_URI')
+# mongo_client = MongoClient(os.getenv('MONGO_URI'))
 
+app.config['MONGO_URI'] = os.getenv('MONGO_URI')
+mongo_client = MongoClient(app.config['MONGO_URI'], server_api=ServerApi('1'))
 # Create database instances
 mongo_blogs = mongo_client['blogs']
 mongo_projects = mongo_client['projects']
@@ -43,6 +47,20 @@ TWILIO_PHONE_NUMBER = '+12294751444'  # Replace with your Twilio phone number
 # Admin credentials
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD') # Replace with a secure password
 
+
+# AWS S3 Configuration
+AWS_ACCESS_KEY = "AKIAUBHBIHM2XJAADZXB"
+AWS_SECRET_KEY = "UtlsWfcxyChpWdr0zO58sWz5jq2Ook4oa2IpRmjF"
+S3_BUCKET = "portfoliouploads"
+S3_REGION = "eu-north-1"
+
+
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY,
+    region_name=S3_REGION
+)
 
 try:
     mongo = PyMongo(app)
@@ -217,8 +235,11 @@ def about():
     skills = mongo_skills.skills_details.find()
     return render_template('about.html',skills=skills) 
 
+
+from botocore.exceptions import NoCredentialsError
+
 @app.route("/save_updated_blog/<blog_id>")
-def sae_updated_blog(blog_id):
+def save_updated_blog(blog_id):
     try:
         # Get form data
         title = request.form.get('title')
@@ -230,12 +251,24 @@ def sae_updated_blog(blog_id):
         edit_date = request.form.get('edit_date')
 
         # Handle thumbnail update
+        # Handling the thumbnail upload
         if 'thumbnail' in request.files and request.files['thumbnail'].filename != '':
             thumbnail = request.files['thumbnail']
             thumbnail_filename = secure_filename(thumbnail.filename)
-            thumbnail.save(os.path.join('static/uploads', thumbnail_filename))
+            
+            try:
+                # Upload to S3
+                s3_client.upload_fileobj(
+                    thumbnail,
+                    S3_BUCKET,
+                    f"uploads/{thumbnail_filename}",
+                    ExtraArgs={'ContentType': thumbnail.content_type}
+                )
+                thumbnail_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/uploads/{thumbnail_filename}"
+            except NoCredentialsError:
+                return "Credentials not available", 500
         else:
-            thumbnail_filename = request.form.get('current_thumbnail')
+            thumbnail_url = request.form.get('current_thumbnail')
 
         # Update document in MongoDB
         update_data = {
@@ -378,25 +411,37 @@ def add_skills():
         if file.filename == '':
             return "No selected file", 400
         
-        # Secure the filename and save the file
+        # Secure the filename
         filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
         
-        # Create the URL for the uploaded icon
-        icon_url = url_for('static', filename='uploads/' + filename)
+        try:
+            # Upload the file to S3
+            s3_key = f"uploads/{filename}"
+            s3_client.upload_fileobj(
+                file,
+                S3_BUCKET,
+                s3_key,
+                ExtraArgs={'ContentType': file.content_type}
+            )
+            
+            # Generate the S3 URL for the uploaded file
+            icon_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{s3_key}"
 
-        # Create a new skill entry
-        new_skill = {
-            "name": skill_name,
-            "icon_url": icon_url,
-            "percentage": percentage
-        }
+            # Create a new skill entry
+            new_skill = {
+                "name": skill_name,
+                "icon_url": icon_url,
+                "percentage": percentage
+            }
+            
+            # Save the skill entry to MongoDB
+            mongo_skills.skills_details.insert_one(new_skill)
+            return redirect(url_for("about"))  # Redirect to the about page or wherever you want
         
-        mongo_skills.skills_details.insert_one(new_skill)
-        return redirect(url_for("about"))  # Redirect to the about page or wherever you want
+        except NoCredentialsError:
+            return "AWS credentials not available", 500
 
-    return render_template("add_skills.html")  # Create a template for adding skills
+    return render_template("add_skills.html")  # Render the add skills template
 
 
 
